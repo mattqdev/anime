@@ -14,7 +14,6 @@
   </strong>
 </p>
 
-
 <p align="center">
   <img alt="NPM Downloads" src="https://img.shields.io/npm/dm/animejs?style=flat-square&logo=npm">
   <img alt="jsDelivr hits (npm)" src="https://img.shields.io/jsdelivr/npm/hm/animejs?style=flat-square&logo=jsdeliver">
@@ -114,30 +113,25 @@ Help the project become sustainable by sponsoring us on <a target="_blank" href=
 
 Get featured here by becoming a <a target="_blank" href="https://github.com/sponsors/juliangarnier">GitHub Sponsor</a>.
 
-
 ## Usage
 
 Anime.js V4 works by importing ES modules like so:
-
 
 <table>
 <tr>
   <td>
 
 ```javascript
-import {
-  animate,
-  stagger,
-} from 'animejs';
+import { animate, stagger } from "animejs";
 
-animate('.square', {
+animate(".square", {
   x: 320,
   rotate: { from: -180 },
   duration: 1250,
-  delay: stagger(65, { from: 'center' }),
-  ease: 'inOutQuint',
+  delay: stagger(65, { from: "center" }),
+  ease: "inOutQuint",
   loop: true,
-  alternate: true
+  alternate: true,
 });
 ```
 
@@ -161,13 +155,17 @@ You can find the v3 to v4 migration guide [here](https://github.com/juliangarnie
 First, run `npm i` to install all the necessary packages.
 Then, execute the following scripts with `npm run <script>`.
 
-| script | action |
-| ------ | ------ |
-| `dev` | Watches for changes in `src/**/*.js`, bundles the ESM version to `lib/` and creates type declarations in `types/` |
-| `dev:test` | Runs `dev` and `test:browser` concurrently |
-| `build` | Bundles ESM / UMD / CJS / IIFE versions to `lib/` and creates type declarations in `types/` |
-| `test:browser` | Starts a local server and runs all browser-related tests |
-| `test:node` | Starts Node-related tests |
-| `open:examples` | Starts a local server to browse the examples locally |
+| script          | action                                                                                                            |
+| --------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `dev`           | Watches for changes in `src/**/*.js`, bundles the ESM version to `lib/` and creates type declarations in `types/` |
+| `dev:test`      | Runs `dev` and `test:browser` concurrently                                                                        |
+| `build`         | Bundles ESM / UMD / CJS / IIFE versions to `lib/` and creates type declarations in `types/`                       |
+| `test:browser`  | Starts a local server and runs all browser-related tests                                                          |
+| `test:node`     | Starts Node-related tests                                                                                         |
+| `open:examples` | Starts a local server to browse the examples locally                                                              |
+
+## Tech stack summary
+
+![Stack Fingerprint](https://stackfingerprint.vercel.app/api/card?repo=juliangarnier/anime&theme=obsidian&layout=tall&size=md&icons=color&pills=round)
 
 © [Julian Garnier](http://juliangarnier.com) | [MIT License](LICENSE.md)

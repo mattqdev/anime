@@ -1,8 +1,8 @@
 /**
  * Anime.js - timer - ESM
- * @version v4.2.2
+ * @version v4.3.6
  * @license MIT
- * @copyright 2025 - Julian Garnier
+ * @copyright 2026 - Julian Garnier
  */
 
 export { Timer, createTimer } from './timer.js';

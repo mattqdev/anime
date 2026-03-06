@@ -1,8 +1,8 @@
 /**
  * Anime.js - animation - ESM
- * @version v4.2.2
+ * @version v4.3.6
  * @license MIT
- * @copyright 2025 - Julian Garnier
+ * @copyright 2026 - Julian Garnier
  */
 
 import { minValue, compositionTypes, tweenTypes } from '../core/consts.js';

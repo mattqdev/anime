@@ -14,6 +14,7 @@ export {}
  * @import { Draggable } from '../draggable/draggable.js';
  * @import { TextSplitter } from '../text/split.js';
  * @import { Scope } from '../scope/scope.js';
+ * @import { AutoLayout } from '../layout/layout.js';
  * @import { Spring } from '../easings/spring/index.js';
  * @import { compositionTypes, tweenTypes, valueTypes } from '../core/consts.js';
  */
@@ -37,7 +38,7 @@ export {}
  * @property {Number|FunctionValue} [duration]
  * @property {Number|FunctionValue} [delay]
  * @property {Number} [loopDelay]
- * @property {EasingParam} [ease]
+ * @property {EasingParam|FunctionValue} [ease]
  * @property {'none'|'replace'|'blend'|compositionTypes} [composition]
  * @property {(v: any) => any} [modifier]
  * @property {Callback<Tickable>} [onBegin]
@@ -52,7 +53,7 @@ export {}
 /** @typedef {JSAnimation|Timeline} Renderable */
 /** @typedef {Timer|Renderable} Tickable */
 /** @typedef {Timer&JSAnimation&Timeline} CallbackArgument */
-/** @typedef {Animatable|Tickable|WAAPIAnimation|Draggable|ScrollObserver|TextSplitter|Scope} Revertible */
+/** @typedef {Animatable|Tickable|WAAPIAnimation|Draggable|ScrollObserver|TextSplitter|Scope|AutoLayout} Revertible */
 
 // Stagger types
 
@@ -202,7 +203,7 @@ export {}
  * @param {Target} target - The animated target
  * @param {Number} index - The target index
  * @param {Number} length - The total number of animated targets
- * @return {Number|String|TweenObjectValue|Array.<Number|String|TweenObjectValue>}
+ * @return {Number|String|TweenObjectValue|EasingParam|Array.<Number|String|TweenObjectValue>}
  */
 
 /**
@@ -220,7 +221,8 @@ export {}
  * @property {String} property
  * @property {Target} target
  * @property {String|Number} _value
- * @property {Function|null} _func
+ * @property {Function|null} _toFunc
+ * @property {Function|null} _fromFunc
  * @property {EasingFunction} _ease
  * @property {Array.<Number>} _fromNumbers
  * @property {Array.<Number>} _toNumbers
@@ -270,7 +272,7 @@ export {}
 // JSAnimation types
 
 /**
- * @typedef {Number|String|FunctionValue} TweenParamValue
+ * @typedef {Number|String|FunctionValue|EasingParam} TweenParamValue
  */
 
 /**
@@ -285,7 +287,7 @@ export {}
  * @typedef {Object} TweenParamsOptions
  * @property {TweenParamValue} [duration]
  * @property {TweenParamValue} [delay]
- * @property {EasingParam} [ease]
+ * @property {EasingParam|FunctionValue} [ease]
  * @property {TweenModifier} [modifier]
  * @property {TweenComposition} [composition]
  */
@@ -376,6 +378,7 @@ export {}
  * @typedef {Object} TimelineOptions
  * @property {DefaultsParams} [defaults]
  * @property {EasingParam} [playbackEase]
+ * @property {Boolean} [composition]
  */
 
 /**
@@ -393,7 +396,7 @@ export {}
  * @param {DOMTarget} target - The animated target
  * @param {Number} index - The target index
  * @param {Number} length - The total number of animated targets
- * @return {WAAPITweenValue}
+ * @return {WAAPITweenValue|WAAPIEasingParam}
  */
 
 /**
@@ -419,7 +422,7 @@ export {}
  * @property {Number} [playbackRate]
  * @property {Number|WAAPIFunctionValue} [duration]
  * @property {Number|WAAPIFunctionValue} [delay]
- * @property {WAAPIEasingParam} [ease]
+ * @property {WAAPIEasingParam|WAAPIFunctionValue} [ease]
  * @property {CompositeOperation} [composition]
  * @property {Boolean} [persist]
  * @property {Callback<WAAPIAnimation>} [onComplete]
@@ -550,6 +553,7 @@ export {}
  * @property {Callback<ScrollObserver>} [onEnterBackward]
  * @property {Callback<ScrollObserver>} [onLeaveBackward]
  * @property {Callback<ScrollObserver>} [onUpdate]
+ * @property {Callback<ScrollObserver>} [onResize]
  * @property {Callback<ScrollObserver>} [onSyncComplete]
  */
 

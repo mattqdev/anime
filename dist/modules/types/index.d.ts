@@ -12,7 +12,7 @@ export type DefaultsParams = {
     duration?: number | FunctionValue;
     delay?: number | FunctionValue;
     loopDelay?: number;
-    ease?: EasingParam;
+    ease?: EasingParam | FunctionValue;
     composition?: "none" | "replace" | "blend" | compositionTypes;
     modifier?: (v: any) => any;
     onBegin?: Callback<Tickable>;
@@ -26,7 +26,7 @@ export type DefaultsParams = {
 export type Renderable = JSAnimation | Timeline;
 export type Tickable = Timer | Renderable;
 export type CallbackArgument = Timer & JSAnimation & Timeline;
-export type Revertible = Animatable | Tickable | WAAPIAnimation | Draggable | ScrollObserver | TextSplitter | Scope;
+export type Revertible = Animatable | Tickable | WAAPIAnimation | Draggable | ScrollObserver | TextSplitter | Scope | AutoLayout;
 export type StaggerFunction<T> = (target?: Target, index?: number, length?: number, tl?: Timeline) => T;
 export type StaggerParams = {
     start?: number | string;
@@ -114,7 +114,7 @@ export type TimerOptions = {
     playbackRate?: number;
 };
 export type TimerParams = TimerOptions & TickableCallbacks<Timer>;
-export type FunctionValue = (target: Target, index: number, length: number) => number | string | TweenObjectValue | Array<number | string | TweenObjectValue>;
+export type FunctionValue = (target: Target, index: number, length: number) => number | string | TweenObjectValue | EasingParam | Array<number | string | TweenObjectValue>;
 export type TweenModifier = (value: number) => number | string;
 export type ColorArray = [number, number, number, number];
 export type Tween = {
@@ -123,7 +123,8 @@ export type Tween = {
     property: string;
     target: Target;
     _value: string | number;
-    _func: Function | null;
+    _toFunc: Function | null;
+    _fromFunc: Function | null;
     _ease: EasingFunction;
     _fromNumbers: Array<number>;
     _toNumbers: Array<number>;
@@ -187,13 +188,13 @@ export type TweenPropertySiblings = {
 export type TweenLookups = Record<string, TweenPropertySiblings>;
 export type TweenReplaceLookups = WeakMap<Target, TweenLookups>;
 export type TweenAdditiveLookups = Map<Target, TweenLookups>;
-export type TweenParamValue = number | string | FunctionValue;
+export type TweenParamValue = number | string | FunctionValue | EasingParam;
 export type TweenPropValue = TweenParamValue | [TweenParamValue, TweenParamValue];
 export type TweenComposition = (string & {}) | "none" | "replace" | "blend" | compositionTypes;
 export type TweenParamsOptions = {
     duration?: TweenParamValue;
     delay?: TweenParamValue;
-    ease?: EasingParam;
+    ease?: EasingParam | FunctionValue;
     modifier?: TweenModifier;
     composition?: TweenComposition;
 };
@@ -249,10 +250,11 @@ export type TimelineAnimationPosition = TimelinePosition | StaggerFunction<numbe
 export type TimelineOptions = {
     defaults?: DefaultsParams;
     playbackEase?: EasingParam;
+    composition?: boolean;
 };
 export type TimelineParams = TimerOptions & TimelineOptions & TickableCallbacks<Timeline> & RenderableCallbacks<Timeline>;
 export type WAAPITweenValue = string | number | Array<string> | Array<number>;
-export type WAAPIFunctionValue = (target: DOMTarget, index: number, length: number) => WAAPITweenValue;
+export type WAAPIFunctionValue = (target: DOMTarget, index: number, length: number) => WAAPITweenValue | WAAPIEasingParam;
 export type WAAPIKeyframeValue = WAAPITweenValue | WAAPIFunctionValue | Array<string | number | WAAPIFunctionValue>;
 export type WAAPITweenOptions = {
     to?: WAAPIKeyframeValue;
@@ -270,7 +272,7 @@ export type WAAPIAnimationOptions = {
     playbackRate?: number;
     duration?: number | WAAPIFunctionValue;
     delay?: number | WAAPIFunctionValue;
-    ease?: WAAPIEasingParam;
+    ease?: WAAPIEasingParam | WAAPIFunctionValue;
     composition?: CompositeOperation;
     persist?: boolean;
     onComplete?: Callback<WAAPIAnimation>;
@@ -327,6 +329,7 @@ export type ScrollObserverParams = {
     onEnterBackward?: Callback<ScrollObserver>;
     onLeaveBackward?: Callback<ScrollObserver>;
     onUpdate?: Callback<ScrollObserver>;
+    onResize?: Callback<ScrollObserver>;
     onSyncComplete?: Callback<ScrollObserver>;
 };
 export type DraggableAxisParam = {
@@ -403,6 +406,7 @@ import type { WAAPIAnimation } from '../waapi/waapi.js';
 import type { Draggable } from '../draggable/draggable.js';
 import type { TextSplitter } from '../text/split.js';
 import type { Scope } from '../scope/scope.js';
+import type { AutoLayout } from '../layout/layout.js';
 import type { Spring } from '../easings/spring/index.js';
 import type { tweenTypes } from '../core/consts.js';
 import type { valueTypes } from '../core/consts.js';

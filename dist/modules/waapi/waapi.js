@@ -1,11 +1,11 @@
 /**
  * Anime.js - waapi - ESM
- * @version v4.2.2
+ * @version v4.3.6
  * @license MIT
- * @copyright 2025 - Julian Garnier
+ * @copyright 2026 - Julian Garnier
  */
 
-import { isNil, isUnd, stringStartsWith, isKey, isObj, isArr, toLowerCase, round, isStr, isFnc, isNum } from '../core/helpers.js';
+import { isNil, isUnd, stringStartsWith, isKey, isObj, isArr, isStr, toLowerCase, round, isFnc, isNum } from '../core/helpers.js';
 import { scope, globals } from '../core/globals.js';
 import { registerTargets } from '../core/targets.js';
 import { setValue, getFunctionValue } from '../core/values.js';
@@ -188,8 +188,6 @@ class WAAPIAnimation {
       console.warn(`No target found. Make sure the element you're trying to animate is accessible before creating your animation.`);
     }
 
-    const ease = setValue(params.ease, parseWAAPIEasing(globals.defaults.ease));
-    const spring = /** @type {Spring} */(ease).ease && ease;
     const autoplay = setValue(params.autoplay, globals.defaults.autoplay);
     const scroll = autoplay && /** @type {ScrollObserver} */(autoplay).link ? autoplay : false;
     const alternate = params.alternate && /** @type {Boolean} */(params.alternate) === true;
@@ -200,8 +198,6 @@ class WAAPIAnimation {
     const direction = alternate ? reversed ? 'alternate-reverse' : 'alternate' : reversed ? 'reverse' : 'normal';
     /** @type {FillMode} */
     const fill = 'both'; // We use 'both' here because the animation can be reversed during playback
-    /** @type {String} */
-    const easing = parseWAAPIEasing(ease);
     const timeScale = (globals.timeScale === 1 ? 1 : K);
 
     /** @type {DOMTargetsArray}] */
@@ -242,6 +238,15 @@ class WAAPIAnimation {
       const elStyle = $el.style;
       const inlineStyles = this._inlineStyles[i] = {};
 
+      const easeToParse = setValue(params.ease, globals.defaults.ease);
+
+      const easeFunctionResult = getFunctionValue(easeToParse, $el, i, targetsLength);
+      const keyEasing = isFnc(easeFunctionResult) || isStr(easeFunctionResult) ? easeFunctionResult : easeToParse;
+
+      const spring = /** @type {Spring} */(easeToParse).ease && easeToParse;
+      /** @type {String} */
+      const easing = parseWAAPIEasing(keyEasing);
+
       /** @type {Number} */
       const duration = (spring ? /** @type {Spring} */(spring).settlingDuration : getFunctionValue(setValue(params.duration, globals.defaults.duration), $el, i, targetsLength)) * timeScale;
       /** @type {Number} */
@@ -266,7 +271,7 @@ class WAAPIAnimation {
         let parsedPropertyValue;
         if (isObj(propertyValue)) {
           const tweenOptions = /** @type {WAAPITweenOptions} */(propertyValue);
-          const tweenOptionsEase = setValue(tweenOptions.ease, ease);
+          const tweenOptionsEase = setValue(tweenOptions.ease, easing);
           const tweenOptionsSpring = /** @type {Spring} */(tweenOptionsEase).ease && tweenOptionsEase;
           const to = /** @type {WAAPITweenOptions} */(tweenOptions).to;
           const from = /** @type {WAAPITweenOptions} */(tweenOptions).from;
@@ -331,9 +336,10 @@ class WAAPIAnimation {
    * @return {this}
    */
   forEach(callback) {
-    const cb = isStr(callback) ? (/** @type {globalThis.Animation} */a) => a[callback]() : callback;
-    this.animations.forEach(cb);
-    return this;
+    try {
+      const cb = isStr(callback) ? (/** @type {globalThis.Animation} */a) => a[callback]() : callback;
+      this.animations.forEach(cb);
+    } catch {}    return this;
   }
 
   get speed() {
@@ -429,14 +435,21 @@ class WAAPIAnimation {
 
   cancel() {
     this.muteCallbacks = true; // This prevents triggering the onComplete callback and resolving the Promise
-    return this.commitStyles().forEach('cancel');
+    this.commitStyles().forEach('cancel');
+    this.animations.length = 0; // Needed to release all animations from memory
+    requestAnimationFrame(() => {
+      this.targets.forEach(($el) => { // Needed to avoid unecessary inline transorms
+        if ($el.style.transform === 'none') $el.style.removeProperty('transform');
+      });
+    });
+    return this;
   }
 
   revert() {
     // NOTE: We need a better way to revert the transforms, since right now the entire transform property value is reverted,
     // This means if you have multiple animations animating different transforms on the same target,
     // reverting one of them will also override the transform property of the other animations.
-    // A better approach would be to store the original custom property values is they exist instead of the entire transform value,
+    // A better approach would be to store the original custom property values if they exist instead of the entire transform value,
     // and update the CSS variables with the orignal value
     this.cancel().targets.forEach(($el, i) => {
       const targetStyle = $el.style;
@@ -446,7 +459,7 @@ class WAAPIAnimation {
         if (isUnd(originalInlinedValue) || originalInlinedValue === emptyString) {
           targetStyle.removeProperty(toLowerCase(name));
         } else {
-          targetStyle[name] = originalInlinedValue;
+          $el.style[name] = originalInlinedValue;
         }
       }
       // Remove style attribute if empty

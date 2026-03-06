@@ -4,6 +4,7 @@ import {
   tweenTypes,
   valueTypes,
   compositionTypes,
+  isDomSymbol,
 } from '../core/consts.js';
 
 import {
@@ -20,6 +21,8 @@ import {
   isNum,
   round,
   isNil,
+  isFnc,
+  isStr,
 } from '../core/helpers.js';
 
 import {
@@ -104,12 +107,14 @@ const fromTargetObject = createDecomposedValueTargetObject();
 const toTargetObject = createDecomposedValueTargetObject();
 const inlineStylesStore = {};
 const toFunctionStore = { func: null };
+const fromFunctionStore = { func: null };
 const keyframesTargetArray = [null];
 const fastSetValuesArray = [null, null];
 /** @type {TweenKeyValue} */
 const keyObjectTarget = { to: null };
 
 let tweenId = 0;
+let JSAnimationId = 0;
 let keyframes;
 /** @type {TweenParamsOptions & TweenValues} */
 let key;
@@ -224,6 +229,8 @@ export class JSAnimation extends Timer {
 
     super(/** @type {TimerParams & AnimationParams} */(parameters), parent, parentPosition);
 
+    ++JSAnimationId;
+
     const parsedTargets = registerTargets(targets);
     const targetsLength = parsedTargets.length;
 
@@ -233,6 +240,7 @@ export class JSAnimation extends Timer {
     const params = /** @type {AnimationParams} */(kfParams ? mergeObjects(generateKeyframes(/** @type {DurationKeyframes} */(kfParams), parameters), parameters) : parameters);
 
     const {
+      id,
       delay,
       duration,
       ease,
@@ -243,11 +251,12 @@ export class JSAnimation extends Timer {
     } = params;
 
     const animDefaults = parent ? parent.defaults : globals.defaults;
-    const animaPlaybackEase = setValue(playbackEase, animDefaults.playbackEase);
-    const animEase = animaPlaybackEase ? parseEase(animaPlaybackEase) : null;
-    const hasSpring = !isUnd(ease) && !isUnd(/** @type {Spring} */(ease).ease);
-    const tEasing = hasSpring ? /** @type {Spring} */(ease).ease : setValue(ease, animEase ? 'linear' : animDefaults.ease);
-    const tDuration = hasSpring ? /** @type {Spring} */(ease).settlingDuration : setValue(duration, animDefaults.duration);
+    const animEase = setValue(ease, animDefaults.ease);
+    const animPlaybackEase = setValue(playbackEase, animDefaults.playbackEase);
+    const parsedAnimPlaybackEase = animPlaybackEase ? parseEase(animPlaybackEase) : null;
+    const hasSpring = !isUnd(/** @type {Spring} */(animEase).ease);
+    const tEasing = hasSpring ? /** @type {Spring} */(animEase).ease : setValue(ease, parsedAnimPlaybackEase ? 'linear' : animDefaults.ease);
+    const tDuration = hasSpring ? /** @type {Spring} */(animEase).settlingDuration : setValue(duration, animDefaults.duration);
     const tDelay = setValue(delay, animDefaults.delay);
     const tModifier = modifier || animDefaults.modifier;
     // If no composition is defined and the targets length is high (>= 1000) set the composition to 'none' (0) for faster tween creation
@@ -255,7 +264,7 @@ export class JSAnimation extends Timer {
     // const absoluteOffsetTime = this._offset;
     const absoluteOffsetTime = this._offset + (parent ? parent._offset : 0);
     // This allows targeting the current animation in the spring onComplete callback
-    if (hasSpring) /** @type {Spring} */(ease).parent = this;
+    if (hasSpring) /** @type {Spring} */(animEase).parent = this;
 
     let iterationDuration = NaN;
     let iterationDelay = NaN;
@@ -340,6 +349,7 @@ export class JSAnimation extends Timer {
             }
 
             toFunctionStore.func = null;
+            fromFunctionStore.func = null;
 
             const computedToValue = getFunctionValue(key.to, target, ti, tl, toFunctionStore);
 
@@ -352,10 +362,13 @@ export class JSAnimation extends Timer {
               tweenToValue = computedToValue;
             }
             const tweenFromValue = getFunctionValue(key.from, target, ti, tl);
-            const keyEasing = key.ease;
+            const easeToParse = key.ease || tEasing;
+
+            const easeFunctionResult = getFunctionValue(easeToParse, target, ti, tl);
+            const keyEasing = isFnc(easeFunctionResult) || isStr(easeFunctionResult) ? easeFunctionResult : easeToParse;
+
             const hasSpring = !isUnd(keyEasing) && !isUnd(/** @type {Spring} */(keyEasing).ease);
-            // Easing are treated differently and don't accept function based value to prevent having to pass a function wrapper that returns an other function all the time
-            const tweenEasing = hasSpring ? /** @type {Spring} */(keyEasing).ease : keyEasing || tEasing;
+            const tweenEasing = hasSpring ? /** @type {Spring} */(keyEasing).ease : keyEasing;
             // Calculate default individual keyframe duration by dividing the tl of keyframes
             const tweenDuration = hasSpring ? /** @type {Spring} */(keyEasing).settlingDuration : getFunctionValue(setValue(key.duration, (l > 1 ? getFunctionValue(tDuration, target, ti, tl) / l : tDuration)), target, ti, tl);
             // Default delay value should only be applied to the first tween
@@ -397,8 +410,10 @@ export class JSAnimation extends Timer {
 
             // Decompose values
             if (isFromToValue) {
-              decomposeRawValue(isFromToArray ? getFunctionValue(tweenToValue[0], target, ti, tl) : tweenFromValue, fromTargetObject);
+              decomposeRawValue(isFromToArray ? getFunctionValue(tweenToValue[0], target, ti, tl, fromFunctionStore) : tweenFromValue, fromTargetObject);
               decomposeRawValue(isFromToArray ? getFunctionValue(tweenToValue[1], target, ti, tl, toFunctionStore) : tweenToValue, toTargetObject);
+              // Needed to force an inline style registration
+              const originalValue = getOriginalAnimatableValue(target, propName, tweenType, inlineStylesStore);
               if (fromTargetObject.t === valueTypes.NUMBER) {
                 if (prevSibling) {
                   if (prevSibling._valueType === valueTypes.UNIT) {
@@ -407,7 +422,7 @@ export class JSAnimation extends Timer {
                   }
                 } else {
                   decomposeRawValue(
-                    getOriginalAnimatableValue(target, propName, tweenType, inlineStylesStore),
+                    originalValue,
                     decomposedOriginalValue
                   );
                   if (decomposedOriginalValue.t === valueTypes.UNIT) {
@@ -512,7 +527,8 @@ export class JSAnimation extends Timer {
               property: propName,
               target: target,
               _value: null,
-              _func: toFunctionStore.func,
+              _toFunc: toFunctionStore.func,
+              _fromFunc: fromFunctionStore.func,
               _ease: parseEase(tweenEasing),
               _fromNumbers: cloneArray(fromTargetObject.d),
               _toNumbers: cloneArray(toTargetObject.d),
@@ -626,12 +642,14 @@ export class JSAnimation extends Timer {
     }
     /** @type {TargetsArray} */
     this.targets = parsedTargets;
+    /** @type {String|Number} */
+    this.id = !isUnd(id) ? id : JSAnimationId;
     /** @type {Number} */
     this.duration = iterationDuration === minValue ? minValue : clampInfinity(((iterationDuration + this._loopDelay) * this.iterationCount) - this._loopDelay) || minValue;
     /** @type {Callback<this>} */
     this.onRender = onRender || animDefaults.onRender;
     /** @type {EasingFunction} */
-    this._ease = animEase;
+    this._ease = parsedAnimPlaybackEase;
     /** @type {Number} */
     this._delay = iterationDelay;
     // NOTE: I'm keeping delay values separated from offsets in timelines because delays can override previous tweens and it could be confusing to debug a timeline with overridden tweens and no associated visible delays.
@@ -668,18 +686,29 @@ export class JSAnimation extends Timer {
    */
   refresh() {
     forEachChildren(this, (/** @type {Tween} */tween) => {
-      const tweenFunc = tween._func;
-      if (tweenFunc) {
-        const ogValue = getOriginalAnimatableValue(tween.target, tween.property, tween._tweenType);
-        decomposeRawValue(ogValue, decomposedOriginalValue);
-        // TODO: Check for from / to Array based values here,
-        decomposeRawValue(tweenFunc(), toTargetObject);
-        tween._fromNumbers = cloneArray(decomposedOriginalValue.d);
-        tween._fromNumber = decomposedOriginalValue.n;
-        tween._toNumbers = cloneArray(toTargetObject.d);
-        tween._strings = cloneArray(toTargetObject.s);
-        // Make sure to apply relative operators https://github.com/juliangarnier/anime/issues/1025
-        tween._toNumber = toTargetObject.o ? getRelativeValue(decomposedOriginalValue.n, toTargetObject.n, toTargetObject.o) : toTargetObject.n;
+      const toFunc = tween._toFunc;
+      const fromFunc = tween._fromFunc;
+      if (toFunc || fromFunc) {
+        if (fromFunc) {
+          decomposeRawValue(fromFunc(), fromTargetObject);
+          if (fromTargetObject.u !== tween._unit && tween.target[isDomSymbol]) {
+            convertValueUnit(/** @type {DOMTarget} */(tween.target), fromTargetObject, tween._unit, true);
+          }
+          tween._fromNumbers = cloneArray(fromTargetObject.d);
+          tween._fromNumber = fromTargetObject.n;
+        } else if (toFunc) {
+          // When only toFunc exists, get from value from target
+          decomposeRawValue(getOriginalAnimatableValue(tween.target, tween.property, tween._tweenType), decomposedOriginalValue);
+          tween._fromNumbers = cloneArray(decomposedOriginalValue.d);
+          tween._fromNumber = decomposedOriginalValue.n;
+        }
+        if (toFunc) {
+          decomposeRawValue(toFunc(), toTargetObject);
+          tween._toNumbers = cloneArray(toTargetObject.d);
+          tween._strings = cloneArray(toTargetObject.s);
+          // Make sure to apply relative operators https://github.com/juliangarnier/anime/issues/1025
+          tween._toNumber = toTargetObject.o ? getRelativeValue(tween._fromNumber, toTargetObject.n, toTargetObject.o) : toTargetObject.n;
+        }
       }
     });
     // This forces setter animations to render once

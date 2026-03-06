@@ -1,8 +1,8 @@
 /**
  * Anime.js - animatable - ESM
- * @version v4.2.2
+ * @version v4.3.6
  * @license MIT
- * @copyright 2025 - Julian Garnier
+ * @copyright 2026 - Julian Garnier
  */
 
 import { compositionTypes, noop } from '../core/consts.js';
